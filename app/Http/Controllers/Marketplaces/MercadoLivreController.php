@@ -71,35 +71,44 @@ class MercadoLivreController extends Controller
     }
 
     public function getCategories(){
-        $parent_ids = Array('-1');
+        $nextParent_ids = Array('-1');
+        do {
+            $parent_ids = $nextParent_ids;
+            unset($nextParent_ids);
+            $nextParent_ids = Array();
+            foreach ($parent_ids as $parent_id) {
+                var_dump('Loading $categs ===>'.$parent_id);
 
-        foreach ($parent_ids as $parent_id) {
-            var_dump('Loading $categs ===>');
-            $categs = $this->getMlCategories($parent_id);
-            if (count($categs) == 0) {
-                break;
-            }
-            foreach ($categs as $categ) {
-var_dump($categ);
+                if ($parent_id !== '-1'){
+                    $categParentId = Category::select('id')
+                                        ->where('id_marketplace',$parent_id)
+                                        ->first()['id'];
 
-var_dump($categs);
-                $cat = new Category;
-                $cat->id_marketplace = $categ['id'];
-                $cat->name           = $categ['name'];
-                $cat->marketplace_id = $this->marketplace_id;
-                $cat->categ_status_code = 'ATIVA';
-                if ($parent_id !== '-1') {
-                    $cat->parent_category_id = $parent_id;
+    var_dump($categParentId);
                 }
-                $cat->save();
-                array_push($parent_ids,$categ['id']);
-            }
-        }
 
+                $categs = $this->getMlCategories($parent_id);
+                if (count($categs) == 0) {
+                    break;
+                }
+                foreach ($categs as $categ) {
+                    $cat = new Category;
+                    $cat->id_marketplace = $categ['id'];
+                    $cat->name           = $categ['name'];
+                    $cat->marketplace_id = $this->marketplace_id;
+                    $cat->categ_status_code = 'ATIVA';
+                    if ($parent_id !== '-1') {
+                        $cat->parent_category_id = $categParentId;
+                    }
+                    $cat->save();
+    var_dump($cat);
+                    array_push($nextParent_ids,$categ['id']);
+                }
+            }
+        } while (count($nextParent_ids) > 0);
     }
 
     public function getMlCategories($parent_id){
-var_dump($parent_id);
         if ($parent_id == '-1') {
             $url = $this->url.'sites/MLB/categories';
         } else {
@@ -108,7 +117,11 @@ var_dump($parent_id);
         curl_setopt($this->curl, CURLOPT_URL, $url);
         curl_setopt($this->curl, CURLOPT_POST, false);
         $response = curl_exec($this->curl);
-        return json_decode($response, true);
+        if ($parent_id == '-1') {
+            return json_decode($response, true);
+        } else {
+            return json_decode($response, true)['children_categories'];
+        }
     }
 
 

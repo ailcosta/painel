@@ -1,19 +1,19 @@
 @extends('adminlte::layouts.app')
 
 @section('htmlheader_title')
-	{{ trans('message.generalData') }}
+	{{ trans('Produtos') }}
 @endsection
 
 @section('contentheader_title')
-	{{ trans('message.generalData') }}
+	{{ trans('Produtos') }}
 @endsection
 
 @section('contentheader_description')
-	{{ trans('(Cadastro de Fornecedores, Unidade de Medidas, Marcas e Códigos)') }}
+	{{ trans('(Cadastro de Produtos)') }}
 @endsection
 <!-- to be changed in contentheader.balade.php-->
 @section('contentheader_path')
-        	{{ "Cadastros"."|"."Cadastros Gerais" }}
+        	{{ "Cadastros"." > "."Produtos" }}
 @endsection
 
 @section('main-content')
