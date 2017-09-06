@@ -23,6 +23,7 @@ class CreateMarketplacesTable extends Migration
             $table->integer("min_qty");
             $table->string("auth_key",255);
             $table->string("auth_pass",255);
+            $table->string("seller_id",255);
             $table->double("full_commission");
             $table->double("forwarded_commission");
         });

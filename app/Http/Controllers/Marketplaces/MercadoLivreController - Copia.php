@@ -17,7 +17,7 @@ use App\Http\Controllers\Marketplaces\Meli\Meli;
 //require 'App/Http/Controllers/Marketplaces/Meli/meli.php';
 //use App\Http\Controllers\Marketplaces\Meli\Meli;
 
-class MercadoLivreController extends Controller
+class MercadoLivreControllerCopia extends Controller
 {
     private $marketplace_id;
     private $sellerId = '14210693';

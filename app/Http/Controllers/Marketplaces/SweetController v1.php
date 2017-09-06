@@ -18,7 +18,8 @@ use App\Product\ProductLog;
 use App\Product\ProductCategory;
 use App\Product\StockLog;
 use DB;
-class AppController extends Controller
+//class AppController extends Controller
+class SweetControllerv1 extends Controller
 {
     private $user  = 'a@a.com';
     private $pass = 'd3hd3hd3h';

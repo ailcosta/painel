@@ -6,59 +6,56 @@ use Illuminate\Http\Request;
 use App\Http\Requests;
 use App\Http\Controllers\Controller;
 
-
 use App\MdlProduct\Category;
 use App\MdlMarketplace\Marketplace;
+use App\MdlMarketplace\Marketplace_session_info;
 
-use App\Http\Controllers\Marketplaces\Meli\Meli;
+//use App\Http\Controllers\Marketplaces\Meli\Meli;
 
 class MercadoLivreController extends Controller
 {
-    private $marketplace_id;
-    private $sellerId = '14210693';
-    private $client_id;
-    private $client_secret;
-    private $url;
-    private $token;
+    private $marketplace_name = 'Mercado Livre';
+    private $mrkt;
+    private $auth;
     private $orderController;
     private $stocks;
     private $prices;
-
     private $curl;
-    private $redirUrl = 'http://painel/ml/loginML';
+    private $redirUrl = 'https://painel.villacoisa.com.br/ml/callback';
+
 
     public function __construct(){
-        $mrkt = Marketplace::where('name', 'Mercado Livre')
+        $this->mrkt = Marketplace::where('name', $this->marketplace_name)
                         ->first();
-//var_dump($mrkt->id);
-        $this->marketplace_id = $mrkt->id;
-        $this->client_id = $mrkt->auth_key;
-        $this->client_secret = $mrkt->auth_pass;
-        $this->url = $mrkt->url;
+        if ($this->mrkt === null) {
+            dd('Marketplace '.$this->marketplace_name.' não cadastrado!');
+        }
         $this->curl = curl_init();
-
-
         curl_setopt($this->curl, CURLOPT_HEADER, false);
         curl_setopt($this->curl, CURLOPT_NOBODY, false);
         curl_setopt($this->curl, CURLOPT_SSL_VERIFYHOST, 0);
         curl_setopt($this->curl, CURLOPT_COOKIE, "cookiename=0");
         curl_setopt($this->curl, CURLOPT_REFERER, $_SERVER['REQUEST_URI']);
         curl_setopt($this->curl, CURLOPT_RETURNTRANSFER, 1);
+//        curl_setopt ($this->curl, CURLOPT_SSL_VERIFYPEER, FALSE);  //IT IS DANGEOURS
         curl_setopt($this->curl, CURLOPT_FOLLOWLOCATION, 0);
-//IT IS DANGEOURS
-//IT IS DANGEOURS
-//IT IS DANGEOURS
-        curl_setopt ($this->curl, CURLOPT_SSL_VERIFYPEER, FALSE); 
-//IT IS DANGEOURS
-//IT IS DANGEOURS
-//IT IS DANGEOURS
+        $this->checkAuth();
 
     }
 
-    public function loginML(){
-        return view('admin.loginML');
+    public function getTestUser(){
+
+        $url = $this->mrkt->url.'users/test_user?access_token='
+            .$this->mrkt->access_token;
+        $response = $this->curl->newRequest('get', $url)
+                                ->send();
+            $data = json_decode($response->body);
+            $limit = 50;
+            $total = floor($data->paging->total/$limit);
+            ob_start();
     }
 
+/*
     public function login(){
         var_dump('step 01');
         $meli = new Meli(
@@ -123,6 +120,77 @@ class MercadoLivreController extends Controller
             return json_decode($response, true)['children_categories'];
         }
     }
+*/
 
+  
+// BEGIN AUTHENTICATION AREA
+
+    public function checkAuth() {
+        $this->auth = Marketplace_session_info::where('marketplace_id', $this->mrkt->id)
+              ->first();
+
+        if ($this->auth === null) {
+            var_dump('Marketplace '.$this->marketplace_name.' token não cadastrado!');
+        } else {
+            if(round(abs(strtotime($this->auth->updated_at) - time()) / 60) >= 300){
+
+                $url = $this->url
+                        .'oauth/token?grant_type=refresh_token&client_id='
+                        .$this->mrkt->auth_key
+                        .'&client_secret='.$this->mrkt->auth_pass
+                        .'&refresh_token='.$this->auth->refresh_token;
+
+                curl_setopt($this->curl, CURLOPT_URL, $url);
+                curl_setopt($this->curl, CURLOPT_POST, true);
+                $response = curl_exec($this->curl);                    
+
+                $data = json_decode($response->body);
+                $this->auth->access_token = $data->access_token;
+                $this->auth->refresh_token = $data->refresh_token;
+                $this->auth->save();            
+            }            
+        }
+    }
+
+    public function loginML(){
+        return view('admin.loginML');
+    }
+
+    public function callback(Request $request){
+        dd($request);
+    }
+
+    public function redirect(Request $request){
+        $code =$request->input('code');
+        $url = 'https://api.mercadolibre.com/oauth/token?grant_type=authorization_code'
+            .'&client_id='.$this->mrkt->auth_key
+            .'&client_secret='.$this->mrkt->auth_pass
+            .'&code='.$code
+            .'&redirect_uri=https://painel.villacoisa.com.br/ml/redirect';
+
+        curl_setopt($this->curl, CURLOPT_URL, $url);
+        curl_setopt($this->curl, CURLOPT_POST, true);
+        $response = curl_exec($this->curl);
+
+        $this->auth =  Marketplace_session_info::where('marketplace_id', 
+                                        $this->mrkt->id)
+                    ->first();
+        if ($this->auth === null) {
+            $this->auth = new Marketplace_session_info;
+            $this->auth->marketplace_id = $this->mrkt->id;
+        }
+
+        $response = json_decode($response);
+        //dd($response);
+        $this->auth->access_token = $response->access_token;
+        $this->auth->refresh_token = $response->refresh_token;
+        if($this->auth->save()){
+            return \Redirect::back()->with(['msg', 'Acesso concluido!']);
+        } else {
+            var_dump('Failed to generate token');
+            dd($response);
+        }
+
+    }
 
 }

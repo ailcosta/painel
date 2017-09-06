@@ -18,7 +18,9 @@ use App\Product\ProductLog;
 use App\Product\ProductCategory;
 use App\Product\StockLog;
 use DB;
-class AppController extends Controller
+
+//class AppController extends Controller
+class SweetController extends Controller
 {
     private $users  = array('a@a.com','','','maisaz@maisaz.com.br');
     private $passs = array('d3hd3hd3h','','','maisaz');
